@@ -1,24 +1,35 @@
-import { useState } from 'react';
-import { fetchKnowledge } from '../api';
+import { useState } from "react";
+import { fetchKnowledge } from "./api";
 
 export default function Knowledge() {
-  const [topic, setTopic] = useState('');
-  const [summary, setSummary] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [topic, setTopic] = useState("");
+  const [data, setData] = useState(null);
 
-  const handleSearch = async () => {
-    setLoading(true);
+  const handleFetchKnowledge = async () => {
+    if (!topic) return;
     const res = await fetchKnowledge(topic);
-    setSummary(res.summary || res.error);
-    setLoading(false);
+    if (!res.error) {
+      setData(res);
+    }
   };
 
   return (
     <div>
-      <h2>Knowledge Engine</h2>
-      <input placeholder="Enter topic" value={topic} onChange={e => setTopic(e.target.value)} />
-      <button onClick={handleSearch}>Search</button>
-      {loading ? <p>Loading...</p> : <p>{summary}</p>}
+      <h2>Knowledge Center</h2>
+      <input 
+        type="text" 
+        placeholder="Enter topic" 
+        value={topic} 
+        onChange={(e) => setTopic(e.target.value)}
+      />
+      <button onClick={handleFetchKnowledge}>Fetch Knowledge</button>
+
+      {data && (
+        <div className="knowledge-result">
+          <h3>{topic}</h3>
+          <pre>{JSON.stringify(data, null, 2)}</pre>
+        </div>
+      )}
     </div>
   );
 }

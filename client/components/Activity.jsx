@@ -1,97 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchKnowledge, saveActivity } from "./api";
 
-function Activity() {
-  const [activity, setActivity] = useState({ name: "", description: "" });
-  const [feedback, setFeedback] = useState("");
+export default function Activity({ userId }) {
+  const [activities, setActivities] = useState([]);
+  const [topic, setTopic] = useState("");
 
-  const handleSave = async () => {
-    // 🧩 1️⃣ Validate inputs
-    if (!activity.name.trim() || !activity.description.trim()) {
-      setFeedback("⚠️ Please fill in all fields before saving.");
-      return;
-    }
-
-    try {
-      // 🧩 2️⃣ Send POST request to backend
-      const response = await fetch("http://localhost:4000/api/user/activity", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(activity),
-      });
-
-      // 🧩 3️⃣ Handle server response safely
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to save activity");
-      }
-
-      const data = await response.json();
-
-      // 🧩 4️⃣ Give feedback to user
-      setFeedback("✅ Activity saved successfully!");
-      console.log("Server response:", data);
-
-      // 🧩 5️⃣ Clear input fields
-      setActivity({ name: "", description: "" });
-    } catch (err) {
-      console.error("Error:", err);
-      setFeedback(`❌ Error: ${err.message}`);
+  const handleSaveActivity = async () => {
+    if (!topic) return;
+    const res = await saveActivity(userId, topic, `Viewed knowledge on ${topic}`);
+    if (!res.error) {
+      alert("Activity saved!");
+      setActivities(prev => [...prev, { name: topic, description: `Viewed knowledge on ${topic}` }]);
+      setTopic("");
     }
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "500px", margin: "auto" }}>
-      <h2>Log New Activity</h2>
-
-      <input
-        type="text"
-        placeholder="Activity Name"
-        value={activity.name}
-        onChange={(e) => setActivity({ ...activity, name: e.target.value })}
-        style={{
-          display: "block",
-          width: "100%",
-          padding: "10px",
-          marginBottom: "10px",
-          borderRadius: "8px",
-          border: "1px solid #ccc",
-        }}
+    <div>
+      <h2>User Activities</h2>
+      <input 
+        type="text" 
+        placeholder="Enter topic" 
+        value={topic} 
+        onChange={(e) => setTopic(e.target.value)}
       />
+      <button onClick={handleSaveActivity}>Save Activity</button>
 
-      <textarea
-        placeholder="Activity Description"
-        value={activity.description}
-        onChange={(e) =>
-          setActivity({ ...activity, description: e.target.value })
-        }
-        style={{
-          display: "block",
-          width: "100%",
-          height: "120px",
-          padding: "10px",
-          borderRadius: "8px",
-          border: "1px solid #ccc",
-          marginBottom: "10px",
-        }}
-      />
-
-      <button
-        onClick={handleSave}
-        style={{
-          backgroundColor: "#007BFF",
-          color: "white",
-          padding: "10px 20px",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-        }}
-      >
-        Save Activity
-      </button>
-
-      <p style={{ marginTop: "15px", fontWeight: "bold" }}>{feedback}</p>
+      <ul>
+        {activities.map((act, i) => (
+          <li key={i}>
+            <b>{act.name}</b> - {act.description}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
-
-export default Activity;

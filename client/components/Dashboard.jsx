@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import CountUp from 'react-countup';
+import { useEffect, useState } from "react";
+import CountUp from "react-countup";
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/dashboard-stats')
+    fetch("http://localhost:4000/api/dashboard-stats")
       .then(res => res.json())
       .then(setStats)
       .catch(err => console.error(err));
@@ -14,7 +14,7 @@ export default function Dashboard() {
   if (!stats) return <div>Loading...</div>;
 
   return (
-    <div className="dashboard-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+    <div className="dashboard-container" style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
       <div className="card">
         <h3>Total Publications</h3>
         <CountUp end={stats.totalPublications} duration={1.5} />

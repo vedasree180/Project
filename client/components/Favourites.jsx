@@ -1,22 +1,34 @@
-import { useState } from 'react';
-import { saveFavorite } from '../api';
+import { useState, useEffect } from "react";
+import { saveFavorite } from "./api";
 
-export default function Favorites({ userId }) {
-  const [topic, setTopic] = useState('');
-  const [msg, setMsg] = useState('');
+export default function Favourites({ userId }) {
+  const [topic, setTopic] = useState("");
+  const [favorites, setFavorites] = useState([]);
 
-  const addFavorite = async () => {
+  const handleSaveFavorite = async () => {
+    if (!topic) return;
     const res = await saveFavorite(userId, topic);
-    setMsg(res.message || res.error);
-    setTopic('');
+    if (!res.error) {
+      setFavorites(prev => [...prev, topic]);
+      setTopic("");
+      alert("Topic saved to favorites!");
+    }
   };
 
   return (
     <div>
       <h2>Favorites</h2>
-      <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Topic" />
-      <button onClick={addFavorite}>Add Favorite</button>
-      <p>{msg}</p>
+      <input 
+        type="text" 
+        placeholder="Enter topic" 
+        value={topic} 
+        onChange={(e) => setTopic(e.target.value)}
+      />
+      <button onClick={handleSaveFavorite}>Add to Favorites</button>
+
+      <ul>
+        {favorites.map((fav, i) => <li key={i}>{fav}</li>)}
+      </ul>
     </div>
   );
 }
