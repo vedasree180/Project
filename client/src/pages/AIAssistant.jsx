@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 import { 
   Bot, 
   Send, 
@@ -11,7 +12,8 @@ import {
   Download,
   Copy,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  AlertCircle
 } from 'lucide-react';
 
 const AIAssistant = () => {
@@ -32,7 +34,11 @@ const AIAssistant = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
+
+  // API base URL - adjust if your backend runs on a different port
+  const API_BASE_URL = 'http://localhost:4000/api';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,59 +59,62 @@ const AIAssistant = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = inputValue;
     setInputValue('');
     setIsLoading(true);
+    setError(null);
 
-    setTimeout(() => {
+    try {
+      // Prepare conversation history for context (last 10 messages)
+      const conversationHistory = messages.slice(-10).map(msg => ({
+        type: msg.type,
+        content: msg.content
+      }));
+
+      const response = await axios.post(`${API_BASE_URL}/ai/chat`, {
+        message: currentMessage,
+        conversationHistory: conversationHistory
+      });
+
       const aiResponse = {
         id: Date.now() + 1,
         type: 'assistant',
-        content: generateAIResponse(inputValue),
-        timestamp: new Date(),
-        sources: [
-          {
-            title: "Effects of Microgravity on Plant Growth Patterns",
-            authors: ["Dr. Sarah Chen", "Dr. Michael Rodriguez"],
-            journal: "Nature Space Biology",
-            year: "2024",
-            relevance: "95%"
-          },
-          {
-            title: "Radiation Resistance in Bacterial Strains",
-            authors: ["Dr. Elena Petrov", "Dr. James Wilson"],
-            journal: "Astrobiology Journal",
-            year: "2024",
-            relevance: "87%"
-          }
-        ],
-        insights: [
-          "Recent studies show significant adaptation patterns in space environments",
-          "Multiple research teams are investigating countermeasures for space-induced changes",
-          "Long-duration missions require comprehensive biological monitoring"
-        ]
+        content: response.data.response,
+        timestamp: new Date(response.data.timestamp),
+        sources: response.data.sources || [],
+        insights: response.data.insights || []
       };
 
       setMessages(prev => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 2000);
-  };
-
-  const generateAIResponse = (query) => {
-    const responses = {
-      'plant': "Based on NASA's extensive plant biology research, I found several key findings about plant growth in space environments. Plants exhibit remarkable adaptability to microgravity conditions, showing altered growth patterns, modified root architecture, and changes in gene expression. The most studied organism, Arabidopsis thaliana, has provided valuable insights into these adaptations.",
-      'microgravity': "Microgravity affects biological systems in profound ways. Research shows that reduced gravity conditions impact cellular structure, fluid dynamics, and developmental processes. Human physiology experiences changes in bone density, muscle mass, and immune function during extended spaceflight.",
-      'radiation': "Radiation resistance is a critical area of research for space exploration. Studies have identified several mechanisms by which organisms adapt to increased radiation exposure, including enhanced DNA repair capabilities and antioxidant production.",
-      'mars': "Mars mission planning involves extensive biological research to ensure crew health and mission success. Key areas include radiation protection, life support systems, and psychological factors during long-duration missions."
-    };
-
-    const lowerQuery = query.toLowerCase();
-    for (const [key, response] of Object.entries(responses)) {
-      if (lowerQuery.includes(key)) {
-        return response;
+    } catch (err) {
+      console.error('AI Assistant Error:', err);
+      
+      let errorMessage = 'Failed to get AI response. Please try again.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'API key issue. Please check your OpenAI configuration.';
+      } else if (err.response?.status === 402) {
+        errorMessage = 'API quota exceeded. Please check your OpenAI account.';
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.code === 'NETWORK_ERROR' || !err.response) {
+        errorMessage = 'Unable to connect to the AI service. Please check if the server is running.';
       }
-    }
 
-    return "I understand you're interested in NASA bioscience research. Based on the available data, I can provide insights on various topics including plant biology, human physiology, microbiology, and space medicine. Could you be more specific about what aspect you'd like to explore?";
+      setError(errorMessage);
+      
+      const errorResponse = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: `I apologize, but I'm experiencing technical difficulties: ${errorMessage}`,
+        timestamp: new Date(),
+        isError: true
+      };
+
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSuggestionClick = (suggestion) => {
@@ -141,6 +150,25 @@ const AIAssistant = () => {
       </motion.div>
 
       <div className="chat-container">
+        {/* Error Display */}
+        {error && (
+          <motion.div 
+            className="error-banner"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <AlertCircle size={20} />
+            <span>{error}</span>
+            <button 
+              className="close-error"
+              onClick={() => setError(null)}
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
+
         {/* Chat Messages */}
         <motion.div 
           className="chat-messages"
@@ -177,8 +205,14 @@ const AIAssistant = () => {
                     </div>
                   </div>
                   
-                  <div className="message-text">
+                  <div className={`message-text ${message.isError ? 'error-text' : ''}`}>
                     {message.content}
+                    {message.isError && (
+                      <div className="error-indicator">
+                        <AlertCircle size={16} />
+                        <span>Technical Issue</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Sources */}
