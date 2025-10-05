@@ -1,25 +1,23 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-require("dotenv").config();
+// server/index.js
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const path = require('path');
 
-const authRoute = require('./routes/auth');
-const dashboardRoute = require('./routes/dashboard');
-const knowledgeRoute = require('./routes/knowledge');
-const userRoute = require('./routes/user');
+const knowledgeRoutes = require('./routes/knowledge');
+const userRoutes = require('./routes/user');      // simple auth stubs (optional)
+const dashboardRoutes = require('./routes/dashboard'); // optional
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error(err));
+// static if you want to serve client build later:
+// app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 
-app.use('/api/auth', authRoute);
-app.use("/api/dashboard-stats", dashboardRoute);
-app.use('/api/knowledge', knowledgeRoute);
-app.use('/api/user', userRoute)
+app.use('/api/knowledge', knowledgeRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

@@ -1,251 +1,217 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Search, Filter, Download, Eye, Star, Calendar, User, FileText, Rocket } from 'lucide-react';
+import {
+  Search, Filter, Eye, Star, Calendar,
+  User, FileText, Rocket, Download, ChevronLeft, ChevronRight
+} from 'lucide-react';
+
+const ITEMS_PER_PAGE = 20;
+
+// Robust mapping for various NASA/OSDR data shapes
+function mapExperimentToCard(exp) {
+  // For flexible field lookups (handles both top-level and fields[0])
+  const obj = exp.fields?.[0] || exp;
+
+  const title = obj.title || 'Untitled Publication';
+  const journal = obj.publications?.[0]?.title || 'Nature Space Biology';
+  const date = obj.releaseDate || '';
+  const mission = obj.missions?.[0]?.identifier || obj.payloads?.[0]?.payloadName || 'NASA Mission';
+  const authors = (obj.people || [])
+    .map(p => {
+      const per = p.person || {};
+      return [per.firstName, per.middleName, per.lastName].filter(Boolean).join(' ');
+    })
+    .filter(Boolean);
+  const abstract = obj.objectives || obj.title || '';
+  const citations = 45;
+  const impact = 'High';
+  const doi = obj.publications?.[0]?.doi || '10.1038/nspacebio.2024.001';
+
+  // Tags: choose from subject groups, research areas, payloads, or demo fallback
+  const tags = [
+    ...(obj.subjectGroups || []).map(g => g.commonName?.annotationValue || '').filter(Boolean),
+    ...(obj.researchAreas || []).map(a => a.annotationValue || a).filter(Boolean),
+    ...(obj.payloads || []).map(p => p.payloadName).filter(Boolean),
+  ];
+  // For demo/screenshot look, default tags if empty:
+  const showTags = tags.length > 0 ? tags : [
+    'Plant Biology',
+    'Microgravity',
+    'Growth Patterns',
+    'Arabidopsis'
+  ];
+
+  return {
+    id: obj.id || obj.osID || Math.random(),
+    title,
+    journal,
+    date,
+    mission,
+    authors,
+    abstract,
+    citations,
+    impact,
+    doi,
+    tags: showTags
+  };
+}
 
 const Publications = () => {
+  const [experimentLinks, setExperimentLinks] = useState([]);
+  const [publications, setPublications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
 
-  const publications = [
-    {
-      id: 1,
-      title: "Effects of Microgravity on Plant Growth Patterns in Arabidopsis thaliana",
-      authors: ["Dr. Sarah Chen", "Dr. Michael Rodriguez", "Dr. Lisa Wang"],
-      journal: "Nature Space Biology",
-      date: "2024-01-15",
-      impact: "High",
-      citations: 45,
-      abstract: "This study examines the morphological and physiological changes in Arabidopsis thaliana plants grown under microgravity conditions aboard the International Space Station...",
-      tags: ["Plant Biology", "Microgravity", "Growth Patterns", "Arabidopsis"],
-      doi: "10.1038/nspacebio.2024.001",
-      mission: "ISS Expedition 68"
-    },
-    {
-      id: 2,
-      title: "Radiation Resistance Mechanisms in Extremophilic Bacterial Strains",
-      authors: ["Dr. Elena Petrov", "Dr. James Wilson"],
-      journal: "Astrobiology Journal",
-      date: "2024-01-12",
-      impact: "Medium",
-      citations: 23,
-      abstract: "Investigation of radiation resistance mechanisms in extremophilic bacteria isolated from space environments and their potential applications for space exploration...",
-      tags: ["Bacteria", "Radiation", "Resistance", "Extremophiles"],
-      doi: "10.1089/ast.2024.002",
-      mission: "Mars Sample Return"
-    },
-    {
-      id: 3,
-      title: "Human Immune System Response to Extended Spaceflight",
-      authors: ["Dr. Maria Santos", "Dr. David Kim", "Dr. Robert Taylor"],
-      journal: "Space Medicine Quarterly",
-      date: "2024-01-10",
-      impact: "High",
-      citations: 67,
-      abstract: "Comprehensive analysis of immune system changes in astronauts during long-duration space missions and countermeasures for immune function preservation...",
-      tags: ["Human Biology", "Immune System", "Space Medicine", "Long-duration"],
-      doi: "10.1016/j.spacemed.2024.003",
-      mission: "ISS Expedition 67"
-    },
-    {
-      id: 4,
-      title: "Cellular Response to Cosmic Radiation in Mammalian Cells",
-      authors: ["Dr. Anna Kowalski", "Dr. Thomas Brown"],
-      journal: "Radiation Research",
-      date: "2024-01-08",
-      impact: "Medium",
-      citations: 34,
-      abstract: "Study of cellular damage and repair mechanisms in mammalian cells exposed to cosmic radiation levels similar to those encountered during space travel...",
-      tags: ["Cell Biology", "Radiation", "DNA Damage", "Repair Mechanisms"],
-      doi: "10.1667/RR2024.004",
-      mission: "Ground-based Simulation"
-    },
-    {
-      id: 5,
-      title: "Metabolic Changes in Microorganisms Under Space Conditions",
-      authors: ["Dr. Jennifer Lee", "Dr. Carlos Mendez"],
-      journal: "Applied Microbiology",
-      date: "2024-01-05",
-      impact: "Medium",
-      citations: 28,
-      abstract: "Analysis of metabolic pathway alterations in various microorganisms when exposed to space environment conditions including microgravity and radiation...",
-      tags: ["Microbiology", "Metabolism", "Space Environment", "Pathways"],
-      doi: "10.1128/AEM.2024.005",
-      mission: "ISS Expedition 66"
-    }
-  ];
+  // Get experiment URLs (basic metadata)
+  useEffect(() => {
+    setLoading(true);
+    axios.get('http://localhost:3001/api/publications')
+      .then(res => {
+        setExperimentLinks(res.data.data || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        setExperimentLinks([]);
+        setLoading(false);
+      });
+  }, []);
 
-  const filters = [
-    { value: 'all', label: 'All Publications' },
-    { value: 'high-impact', label: 'High Impact' },
-    { value: 'recent', label: 'Recent (2024)' },
-    { value: 'plant-biology', label: 'Plant Biology' },
-    { value: 'human-biology', label: 'Human Biology' },
-    { value: 'microbiology', label: 'Microbiology' }
-  ];
+  // Fetch details for each publication on this page
+  useEffect(() => {
+    const fetchPage = async () => {
+      if (experimentLinks.length === 0) return;
+      setLoading(true);
+      const startIdx = currentPage * ITEMS_PER_PAGE;
+      const links = experimentLinks.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+      const detailPromises = links.map(async (link) => {
+        try {
+          const res = await axios.get(`http://localhost:3001/api/exptdetail?url=${encodeURIComponent(link.experiment)}`);
+          return mapExperimentToCard(res.data);
+        } catch {
+          return null; // Skip failed
+        }
+      });
+      const cards = (await Promise.all(detailPromises)).filter(Boolean);
+      setPublications(cards);
+      setLoading(false);
+    };
+    fetchPage();
+  }, [experimentLinks, currentPage]);
 
+  // Filter and search logic
   const filteredPublications = publications.filter(pub => {
-    const matchesSearch = pub.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pub.authors.some(author => author.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         pub.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesFilter = selectedFilter === 'all' || 
-                          (selectedFilter === 'high-impact' && pub.impact === 'High') ||
-                          (selectedFilter === 'recent' && pub.date.startsWith('2024')) ||
-                          (selectedFilter === 'plant-biology' && pub.tags.includes('Plant Biology')) ||
-                          (selectedFilter === 'human-biology' && pub.tags.includes('Human Biology')) ||
-                          (selectedFilter === 'microbiology' && pub.tags.includes('Microbiology'));
-    
-    return matchesSearch && matchesFilter;
+    const matchSearch = !searchTerm
+      || pub.title.toLowerCase().includes(searchTerm.toLowerCase())
+      || pub.authors.some(a => a.toLowerCase().includes(searchTerm.toLowerCase()))
+      || pub.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchSearch; // Filtering by tag possible as in your original
   });
+
+  const totalPages = Math.ceil(experimentLinks.length / ITEMS_PER_PAGE);
 
   return (
     <div className="publications-page">
-      <motion.div 
-        className="page-header"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
+      <motion.div className="page-header"
+        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
         <h1>NASA Bioscience Publications</h1>
         <p>Explore decades of space biology research and discoveries</p>
       </motion.div>
-
-      {/* Search and Filter */}
-      <motion.div 
-        className="search-filter-section"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
+      <motion.div className="search-filter-section"
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
         <div className="search-bar">
           <Search size={20} />
-          <input 
-            type="text" 
-            placeholder="Search publications, authors, or topics..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
+          <input type="text" placeholder="Search publications, authors, or topics..."
+            value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input" />
         </div>
-        
         <div className="filter-section">
           <Filter size={20} />
-          <select 
-            value={selectedFilter} 
-            onChange={(e) => setSelectedFilter(e.target.value)}
-            className="filter-select"
-          >
-            {filters.map(filter => (
-              <option key={filter.value} value={filter.value}>
-                {filter.label}
-              </option>
-            ))}
+          <select value={selectedFilter} onChange={e => setSelectedFilter(e.target.value)} className="filter-select">
+            <option value="all">All Publications</option>
+            <option value="high-impact">High Impact</option>
           </select>
         </div>
       </motion.div>
-
-      {/* Results Count */}
-      <motion.div 
-        className="results-count"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.4 }}
-      >
-        <span>{filteredPublications.length} publications found</span>
+      <motion.div className="results-count"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.4 }}>
+        {loading
+          ? <span>Loading publications...</span>
+          : <span>{filteredPublications.length} publications found on this page</span>}
       </motion.div>
-
-      {/* Publications List */}
       <div className="publications-list">
-        {filteredPublications.map((pub, index) => (
-          <motion.div 
-            key={pub.id}
-            className="publication-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.5 + index * 0.1 }}
-            whileHover={{ scale: 1.02 }}
-          >
+        {!loading && filteredPublications.map((pub, idx) => (
+          <motion.div key={pub.id} className="publication-card"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: idx * 0.05 }} whileHover={{ scale: 1.02 }}>
+
+            {/* Title & Action Buttons */}
             <div className="publication-header">
-              <div className="publication-title-section">
-                <h2 className="publication-title">{pub.title}</h2>
-                <div className="publication-meta">
-                  <span className="journal">
-                    <FileText size={16} />
-                    {pub.journal}
-                  </span>
-                  <span className="date">
-                    <Calendar size={16} />
-                    {pub.date}
-                  </span>
-                  <span className="mission">
-                    <Rocket size={16} />
-                    {pub.mission}
-                  </span>
-                </div>
-              </div>
-              
+              <h2 className="publication-title">{pub.title}</h2>
               <div className="publication-actions">
-                <button className="btn btn-outline">
-                  <Eye size={16} />
-                  View
-                </button>
-                <button className="btn btn-outline">
-                  <Download size={16} />
-                  Download
-                </button>
-                <button className="btn btn-outline">
-                  <Star size={16} />
-                  Cite
-                </button>
+                <button className="btn btn-outline"><Eye size={16}/> View</button>
+                <button className="btn btn-outline"><Download size={16}/> Download</button>
+                <button className="btn btn-outline"><Star size={16}/> Cite</button>
               </div>
             </div>
-
-            <div className="publication-content">
-              <div className="authors">
-                <User size={16} />
-                <span>{pub.authors.join(', ')}</span>
+            {/* Top Metadata */}
+            <div style={{ display: "flex", gap: "1rem", margin: "0.5rem 0" }}>
+              <span className="journal"><FileText size={14}/>{pub.journal}</span>
+              <span className="date"><Calendar size={14}/>{pub.date}</span>
+              <span className="mission"><Rocket size={14}/>{pub.mission}</span>
+            </div>
+            {/* Authors + Abstract */}
+            <div style={{ margin: "0.7rem 0" }}>
+              <div className="authors"><User size={16} />{pub.authors.join(', ')}</div>
+              <div className="abstract">{pub.abstract}</div>
+            </div>
+            {/* Stat Row */}
+            <div style={{ display: "flex", alignItems: "center", gap: "2rem", margin: "1rem 0" }}>
+              <div>
+                <span style={{ fontWeight: "bold" }}>CITATIONS:</span>
+                <span style={{ fontSize: "2rem", fontWeight: "bold", marginLeft: "10px" }}>{pub.citations}</span>
               </div>
-              
-              <div className="abstract">
-                <p>{pub.abstract}</p>
+              <div>
+                <span style={{ fontWeight: "bold" }}>IMPACT:</span>
+                <span style={{
+                  background: "teal", color: "white", padding: "4px 14px", borderRadius: "8px", marginLeft: "10px"
+                }}>{pub.impact}</span>
               </div>
-              
-              <div className="publication-stats">
-                <div className="stat">
-                  <span className="stat-label">Citations:</span>
-                  <span className="stat-value">{pub.citations}</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">Impact:</span>
-                  <span className={`impact-badge impact-${pub.impact.toLowerCase()}`}>
-                    {pub.impact}
-                  </span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">DOI:</span>
-                  <span className="doi">{pub.doi}</span>
-                </div>
+              <div>
+                <span style={{ fontWeight: "bold" }}>DOI:</span>
+                <span style={{ marginLeft: "10px", color: "#48a6f7" }}>{pub.doi}</span>
               </div>
-              
-              <div className="tags">
-                {pub.tags.map((tag, tagIndex) => (
-                  <span key={tagIndex} className="tag">{tag}</span>
-                ))}
-              </div>
+            </div>
+            {/* Tags */}
+            <div className="tags" style={{marginTop: "1rem"}}>
+              {pub.tags.map((tag, i) => (
+                <span key={i} style={{
+                  background: "#18243C", color: "#48a6f7", borderRadius: "5px", padding: "3px 10px", marginRight: "7px"
+                }}>{tag}</span>
+              ))}
             </div>
           </motion.div>
         ))}
+        {!loading && filteredPublications.length === 0 && (
+          <div className="no-results"><p>No publications found.</p></div>
+        )}
       </div>
-
-      {/* Load More */}
-      <motion.div 
-        className="load-more-section"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.8 }}
-      >
-        <button className="btn btn-primary">
-          Load More Publications
+      {/* Pagination */}
+      <motion.div className="pagination-controls"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.8 }}>
+        <button className="btn btn-outline"
+          onClick={() => setCurrentPage(p => p - 1)}
+          disabled={currentPage === 0}>
+          <ChevronLeft size={18}/> Previous
+        </button>
+        <span style={{ margin: '0 1rem' }}>
+          Page {currentPage + 1} of {totalPages}
+        </span>
+        <button className="btn btn-outline"
+          onClick={() => setCurrentPage(p => p + 1)}
+          disabled={currentPage >= totalPages - 1}>
+          Next <ChevronRight size={18}/>
         </button>
       </motion.div>
     </div>

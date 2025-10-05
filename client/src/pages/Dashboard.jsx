@@ -1,9 +1,11 @@
-import React from 'react';
+// Dashboard.jsx
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  Users, 
-  TrendingUp, 
+import {
+  FileText,
+  Users,
+  TrendingUp,
   Globe,
   Calendar,
   Award,
@@ -13,31 +15,55 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
+  const [totalPublications, setTotalPublications] = useState(0);
+
+  useEffect(() => {
+    axios.get('http://localhost:3001/api/publications')
+      .then(response => {
+        console.log('✅ API Response:', response.data);
+
+        // The API returns an object with a 'data' key, which holds the array
+        const experiments = response.data.data;
+
+        if (Array.isArray(experiments)) {
+          setTotalPublications(experiments.length);
+        } else {
+          // This block is for handling unexpected data structures, not for resetting on success.
+          console.warn('⚠️ Unexpected data structure:', experiments);
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error fetching publications:', error);
+        setTotalPublications(0); // Only reset to 0 on a network/API error
+      });
+  }, []);
+
+
   const stats = [
-    { 
-      icon: FileText, 
-      value: '2,847', 
+    {
+      icon: FileText,
+      value: totalPublications,
       label: 'Total Publications',
       change: '+12%',
       color: 'var(--primary-color)'
     },
-    { 
-      icon: Users, 
-      value: '156', 
+    {
+      icon: Users,
+      value: '156',
       label: 'Research Teams',
       change: '+8%',
       color: 'var(--success-color)'
     },
-    { 
-      icon: TrendingUp, 
-      value: '89%', 
+    {
+      icon: TrendingUp,
+      value: '89%',
       label: 'Success Rate',
       change: '+3%',
       color: 'var(--warning-color)'
     },
-    { 
-      icon: Globe, 
-      value: '42', 
+    {
+      icon: Globe,
+      value: '42',
       label: 'Countries',
       change: '+2',
       color: 'var(--accent-color)'
@@ -83,7 +109,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
-      <motion.div 
+      <motion.div
         className="dashboard-header"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -96,14 +122,14 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Stats Grid */}
-      <motion.div 
+      <motion.div
         className="stats-grid"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
       >
         {stats.map((stat, index) => (
-          <motion.div 
+          <motion.div
             key={stat.label}
             className="stat-card"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -125,7 +151,7 @@ const Dashboard = () => {
 
       <div className="dashboard-content">
         {/* Recent Publications */}
-        <motion.div 
+        <motion.div
           className="card"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -135,10 +161,10 @@ const Dashboard = () => {
             <h2 className="card-title">Recent Publications</h2>
             <button className="btn btn-outline">View All</button>
           </div>
-          
+
           <div className="publications-list">
             {recentPublications.map((pub, index) => (
-              <motion.div 
+              <motion.div
                 key={pub.id}
                 className="publication-item"
                 initial={{ opacity: 0, y: 20 }}
@@ -168,7 +194,7 @@ const Dashboard = () => {
         </motion.div>
 
         {/* Research Areas */}
-        <motion.div 
+        <motion.div
           className="card"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -178,10 +204,10 @@ const Dashboard = () => {
             <h2 className="card-title">Top Research Areas</h2>
             <button className="btn btn-outline">Explore</button>
           </div>
-          
+
           <div className="research-areas">
             {topResearchAreas.map((area, index) => (
-              <motion.div 
+              <motion.div
                 key={area.name}
                 className="research-area-item"
                 initial={{ opacity: 0, x: 20 }}
@@ -193,7 +219,7 @@ const Dashboard = () => {
                   <span className="area-count">{area.count} publications</span>
                 </div>
                 <div className="progress-bar">
-                  <div 
+                  <div
                     className="progress-fill"
                     style={{ width: `${area.percentage}%` }}
                   ></div>
@@ -206,7 +232,7 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <motion.div 
+      <motion.div
         className="quick-actions"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -214,7 +240,7 @@ const Dashboard = () => {
       >
         <h3>Quick Actions</h3>
         <div className="actions-grid">
-          <motion.button 
+          <motion.button
             className="action-card"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -222,8 +248,8 @@ const Dashboard = () => {
             <Zap size={24} />
             <span>AI-Powered Search</span>
           </motion.button>
-          
-          <motion.button 
+
+          <motion.button
             className="action-card"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -231,8 +257,8 @@ const Dashboard = () => {
             <Network size={24} />
             <span>Explore Knowledge Graph</span>
           </motion.button>
-          
-          <motion.button 
+
+          <motion.button
             className="action-card"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -240,8 +266,8 @@ const Dashboard = () => {
             <Target size={24} />
             <span>Mission Planning</span>
           </motion.button>
-          
-          <motion.button 
+
+          <motion.button
             className="action-card"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

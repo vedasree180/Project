@@ -1,36 +1,33 @@
-const express = require("express");
-const router = express.Router();
-const Publication = require("../models/Publication");
-const User = require("../models/User");
+// server.js
+import express from 'express';
+import axios from 'axios';
+import cors from 'cors';
 
-router.get("/", async (req, res) => {
+const app = express();
+const port = 3001;
+
+app.use(cors());
+
+app.get('/api/publications', async (req, res) => {
   try {
-    const totalPublications = await Publication.countDocuments();
-    const publicationsChange = 12; // placeholder for dynamic calculation
+    const apiKey = 'GkUc4JHO3E7vLqZuF6DGdNOb0HPMzS0CUm6J50Ml';
+    const url = `https://osdr.nasa.gov/geode-py/ws/api/experiments?api_key=${apiKey}`;
 
-    const researchTeams = await User.distinct("teamId").then(arr => arr.length);
-    const teamsChange = 8;
+    const { data } = await axios.get(url);
 
-    const successRate = Math.floor(Math.random() * 100); // placeholder
-    const successChange = 3;
+    // console.log('NASA API Response:', data); // For debugging
 
-    const countries = await User.distinct("country").then(arr => arr.length);
-    const countriesChange = 2;
-
-    res.json({
-      totalPublications,
-      publicationsChange,
-      researchTeams,
-      teamsChange,
-      successRate,
-      successChange,
-      countries,
-      countriesChange
-    });
-  } catch (err) {
-    console.error("Dashboard stats error:", err);
-    res.status(500).json({ error: err.message });
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching publications:', error.message);
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Data:', error.response.data);
+    }
+    res.status(500).json({ error: 'Failed to fetch publications' });
   }
 });
 
-module.exports = router;
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});

@@ -1,32 +1,48 @@
+// server/routes/knowledge.js
 const express = require('express');
-const axios = require('axios');
-const OpenAI = require('openai'); // updated import
-
 const router = express.Router();
+const Knowledge = require('../models/Knowledge');
 
-// ✅ Initialize OpenAI client with apiKey directly
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+// GET /api/knowledge/graph
+router.get('/graph', (req, res) => {
+  Knowledge.getGraph((err, graph) => {
+    if (err) return res.status(500).json({ error: 'Failed to load graph', details: err.message });
+    res.json(graph);
+  });
 });
 
-router.get('/', async (req, res) => {
-  try {
-    const topic = req.query.topic;
-    // Fetch PubMed data
-    const pubmedRes = await axios.get(`https://api.ncbi.nlm.nih.gov/lit/ctxp/v1/pubmed/?format=abstract&term=${encodeURIComponent(topic)}`);
-    const text = pubmedRes.data;
-
-    // Summarize with OpenAI
-    const summary = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: `Summarize the following: ${text}` }]
+// GET /api/knowledge/node/:id
+router.get('/node/:id', (req, res) => {
+  const id = req.params.id;
+  Knowledge.getNodeById(id, (err, node) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!node) return res.status(404).json({ error: 'Node not found' });
+    // also compute 1-hop neighbors and links (simple)
+    Knowledge.neighborhood(id, 1, (err2, graph) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ node, neighbors: graph.nodes.filter(n => String(n.id) !== String(id)), links: graph.links });
     });
+  });
+});
 
-    res.json({ summary: summary.choices[0].message.content });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
+// GET /api/knowledge/search?q=term
+router.get('/search', (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ results: [] });
+  Knowledge.searchNodes(q, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ results: rows });
+  });
+});
+
+// GET /api/knowledge/neighborhood/:id?hops=2
+router.get('/neighborhood/:id', (req, res) => {
+  const id = req.params.id;
+  const hops = parseInt(req.query.hops || '1', 10);
+  Knowledge.neighborhood(id, hops, (err, graph) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(graph);
+  });
 });
 
 module.exports = router;
