@@ -1,0 +1,18 @@
+.description-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 6; /* set to 5 for exactly 5 lines */
+  line-clamp: 6; /* standard property for compatibility */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.line-clamp-6 {
+  -webkit-line-clamp: 6; /* set to desired number of lines */
+  line-clamp: 6; /* standard property for compatibility */
+  -webkit-line-clamp: 6; /* set to desired number of lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

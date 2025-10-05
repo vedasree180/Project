@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './publications.css';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
@@ -8,39 +9,33 @@ import {
 
 const ITEMS_PER_PAGE = 20;
 
-// Robust mapping for various NASA/OSDR data shapes
 function mapExperimentToCard(exp) {
-  // For flexible field lookups (handles both top-level and fields[0])
   const obj = exp.fields?.[0] || exp;
 
   const title = obj.title || 'Untitled Publication';
   const journal = obj.publications?.[0]?.title || 'Nature Space Biology';
   const date = obj.releaseDate || '';
-  const mission = obj.missions?.[0]?.identifier || obj.payloads?.[0]?.payloadName || 'NASA Mission';
-  const authors = (obj.people || [])
-    .map(p => {
-      const per = p.person || {};
-      return [per.firstName, per.middleName, per.lastName].filter(Boolean).join(' ');
-    })
-    .filter(Boolean);
-  const abstract = obj.objectives || obj.title || '';
-  const citations = 45;
-  const impact = 'High';
-  const doi = obj.publications?.[0]?.doi || '10.1038/nspacebio.2024.001';
+  const mission = obj.missions?.[0]?.identifier || (obj.payloads && obj.payloads[0]?.payloadName) || 'NASA Mission';
 
-  // Tags: choose from subject groups, research areas, payloads, or demo fallback
-  const tags = [
-    ...(obj.subjectGroups || []).map(g => g.commonName?.annotationValue || '').filter(Boolean),
-    ...(obj.researchAreas || []).map(a => a.annotationValue || a).filter(Boolean),
-    ...(obj.payloads || []).map(p => p.payloadName).filter(Boolean),
-  ];
-  // For demo/screenshot look, default tags if empty:
-  const showTags = tags.length > 0 ? tags : [
-    'Plant Biology',
-    'Microgravity',
-    'Growth Patterns',
-    'Arabidopsis'
-  ];
+  // Only first 2-3 people
+  const authors = (obj.people || [])
+    .slice(0, 3)
+    .map(p => {
+      const per = p.person || p;
+      const role = (p.roles && p.roles[0] && p.roles[0].annotationValue) || '';
+      return [
+        per.firstName, per.middleName, per.lastName
+      ].filter(Boolean).join(' ') + (role ? ` (${role})` : '');
+    });
+
+  // The abstract area is always payload[0].description if available
+  const description =
+    (obj.payloads && obj.payloads[0] && obj.payloads[0].description)
+    || obj.description
+    || obj.objectives
+    || obj.approach
+    || obj.results
+    || 'No description available.';
 
   return {
     id: obj.id || obj.osID || Math.random(),
@@ -49,11 +44,7 @@ function mapExperimentToCard(exp) {
     date,
     mission,
     authors,
-    abstract,
-    citations,
-    impact,
-    doi,
-    tags: showTags
+    description
   };
 }
 
@@ -65,7 +56,6 @@ const Publications = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
 
-  // Get experiment URLs (basic metadata)
   useEffect(() => {
     setLoading(true);
     axios.get('http://localhost:3001/api/publications')
@@ -73,13 +63,12 @@ const Publications = () => {
         setExperimentLinks(res.data.data || []);
         setLoading(false);
       })
-      .catch(err => {
+      .catch(() => {
         setExperimentLinks([]);
         setLoading(false);
       });
   }, []);
 
-  // Fetch details for each publication on this page
   useEffect(() => {
     const fetchPage = async () => {
       if (experimentLinks.length === 0) return;
@@ -91,7 +80,7 @@ const Publications = () => {
           const res = await axios.get(`http://localhost:3001/api/exptdetail?url=${encodeURIComponent(link.experiment)}`);
           return mapExperimentToCard(res.data);
         } catch {
-          return null; // Skip failed
+          return null;
         }
       });
       const cards = (await Promise.all(detailPromises)).filter(Boolean);
@@ -101,13 +90,11 @@ const Publications = () => {
     fetchPage();
   }, [experimentLinks, currentPage]);
 
-  // Filter and search logic
   const filteredPublications = publications.filter(pub => {
     const matchSearch = !searchTerm
       || pub.title.toLowerCase().includes(searchTerm.toLowerCase())
-      || pub.authors.some(a => a.toLowerCase().includes(searchTerm.toLowerCase()))
-      || pub.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchSearch; // Filtering by tag possible as in your original
+      || pub.authors.some(a => a.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchSearch;
   });
 
   const totalPages = Math.ceil(experimentLinks.length / ITEMS_PER_PAGE);
@@ -158,38 +145,19 @@ const Publications = () => {
             {/* Top Metadata */}
             <div style={{ display: "flex", gap: "1rem", margin: "0.5rem 0" }}>
               <span className="journal"><FileText size={14}/>{pub.journal}</span>
-              <span className="date"><Calendar size={14}/>{pub.date}</span>
               <span className="mission"><Rocket size={14}/>{pub.mission}</span>
             </div>
-            {/* Authors + Abstract */}
+            {/* Authors + Description */}
             <div style={{ margin: "0.7rem 0" }}>
               <div className="authors"><User size={16} />{pub.authors.join(', ')}</div>
-              <div className="abstract">{pub.abstract}</div>
+              <div className="abstract description-clamp">{pub.description}</div>
             </div>
-            {/* Stat Row */}
+            {/* Stat Row - Only date shown, styled */}
             <div style={{ display: "flex", alignItems: "center", gap: "2rem", margin: "1rem 0" }}>
               <div>
-                <span style={{ fontWeight: "bold" }}>CITATIONS:</span>
-                <span style={{ fontSize: "2rem", fontWeight: "bold", marginLeft: "10px" }}>{pub.citations}</span>
+                <span style={{ fontWeight: "bold" }}>DATE:</span>
+                <span style={{ fontSize: "2rem", fontWeight: "bold", marginLeft: "10px" }}>{pub.date}</span>
               </div>
-              <div>
-                <span style={{ fontWeight: "bold" }}>IMPACT:</span>
-                <span style={{
-                  background: "teal", color: "white", padding: "4px 14px", borderRadius: "8px", marginLeft: "10px"
-                }}>{pub.impact}</span>
-              </div>
-              <div>
-                <span style={{ fontWeight: "bold" }}>DOI:</span>
-                <span style={{ marginLeft: "10px", color: "#48a6f7" }}>{pub.doi}</span>
-              </div>
-            </div>
-            {/* Tags */}
-            <div className="tags" style={{marginTop: "1rem"}}>
-              {pub.tags.map((tag, i) => (
-                <span key={i} style={{
-                  background: "#18243C", color: "#48a6f7", borderRadius: "5px", padding: "3px 10px", marginRight: "7px"
-                }}>{tag}</span>
-              ))}
             </div>
           </motion.div>
         ))}

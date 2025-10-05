@@ -1,4 +1,6 @@
-const mongoose = require("mongoose");
+// server/models/User.js
+import mongoose from 'mongoose';
+
 const userSchema = new mongoose.Schema({
   name: String,
   email: String,
@@ -6,6 +8,6 @@ const userSchema = new mongoose.Schema({
   teamId: String,
   country: String
 });
-module.exports = mongoose.models.User || mongoose.model("User", userSchema);
 
-
+// ✅ Fix for OverwriteModelError
+export default mongoose.models.User || mongoose.model('User', userSchema);

@@ -1,4 +1,6 @@
-const mongoose = require("mongoose");
+// server/models/Publication.js
+import mongoose from 'mongoose';
+
 const publicationSchema = new mongoose.Schema({
   title: String,
   authors: [String],
@@ -7,4 +9,6 @@ const publicationSchema = new mongoose.Schema({
   teamId: String,
   country: String
 });
-module.exports = mongoose.models.Publication || mongoose.model("Publication", publicationSchema);
+
+// ✅ Fix for OverwriteModelError
+export default mongoose.models.Publication || mongoose.model('Publication', publicationSchema);

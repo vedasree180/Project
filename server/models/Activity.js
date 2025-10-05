@@ -1,5 +1,5 @@
 // server/models/Activity.js
-const mongoose = require("mongoose");
+import mongoose from 'mongoose';
 
 const activitySchema = new mongoose.Schema({
   userId: { type: String, required: true },
@@ -9,4 +9,4 @@ const activitySchema = new mongoose.Schema({
 });
 
 // ✅ Fix for OverwriteModelError
-module.exports = mongoose.models.Activity || mongoose.model("Activity", activitySchema);
+export default mongoose.models.Activity || mongoose.model("Activity", activitySchema);
