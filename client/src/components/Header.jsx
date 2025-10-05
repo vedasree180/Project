@@ -14,24 +14,7 @@ const Header = () => {
           </div>
         </div>
         
-        <div className="header-actions">
-          <div className="search-bar">
-            <Search size={20} />
-            <input 
-              type="text" 
-              placeholder="Search publications, experiments, or topics..."
-              className="search-input"
-            />
-          </div>
-          
-          <button className="btn btn-secondary">
-            <Bell size={20} />
-          </button>
-          
-          <button className="btn btn-secondary">
-            <User size={20} />
-          </button>
-        </div>
+        
       </div>
     </header>
   );

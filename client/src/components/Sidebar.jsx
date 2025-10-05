@@ -6,7 +6,6 @@ import {
   Network, 
   Bot, 
   BarChart3,
-  Settings,
   HelpCircle
 } from 'lucide-react';
 
@@ -19,10 +18,6 @@ const Sidebar = () => {
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   ];
 
-  const bottomItems = [
-    { path: '/settings', icon: Settings, label: 'Settings' },
-    { path: '/help', icon: HelpCircle, label: 'Help' },
-  ];
 
   return (
     <aside className="sidebar">
@@ -46,21 +41,7 @@ const Sidebar = () => {
         
         <div className="nav-divider"></div>
         
-        <ul className="nav-menu">
-          {bottomItems.map((item) => (
-            <li key={item.path} className="nav-item">
-              <NavLink 
-                to={item.path} 
-                className={({ isActive }) => 
-                  `nav-link ${isActive ? 'active' : ''}`
-                }
-              >
-                <item.icon className="nav-icon" />
-                <span>{item.label}</span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+       
       </nav>
     </aside>
   );
