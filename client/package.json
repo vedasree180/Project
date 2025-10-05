@@ -12,6 +12,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.2",
     "axios": "^1.6.0",
+    "d3": "^7.9.0",
     "date-fns": "^2.30.0",
     "framer-motion": "^10.18.0",
     "lucide-react": "^0.294.0",
