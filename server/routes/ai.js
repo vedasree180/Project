@@ -1,11 +1,12 @@
-const express = require('express');
-const OpenAI = require('openai');
+// server/routes/ai.js
+import express from 'express';
+import OpenAI from 'openai';
 
 const router = express.Router();
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // NASA Bioscience AI Assistant endpoint
@@ -30,25 +31,25 @@ router.post('/chat', async (req, res) => {
 5. Mars mission biology research
 6. International Space Station experiments
 
-Always provide accurate, scientific information based on NASA research. When discussing specific studies, mention authors, journals, and years when possible. Be helpful, educational, and encourage further exploration of space biology topics.`
+Always provide accurate, scientific information based on NASA research. When discussing specific studies, mention authors, journals, and years when possible. Be helpful, educational, and encourage further exploration of space biology topics.`,
       },
-      ...conversationHistory.map(msg => ({
+      ...conversationHistory.map((msg) => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
-        content: msg.content
+        content: msg.content,
       })),
       {
         role: 'user',
-        content: message
-      }
+        content: message,
+      },
     ];
 
     // Generate AI response
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: messages,
+      messages,
       max_tokens: 1000,
       temperature: 0.7,
-      stream: false
+      stream: false,
     });
 
     const aiResponse = completion.choices[0].message.content;
@@ -59,35 +60,34 @@ Always provide accurate, scientific information based on NASA research. When dis
 
     res.json({
       response: aiResponse,
-      sources: sources,
-      insights: insights,
-      timestamp: new Date().toISOString()
+      sources,
+      insights,
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error('AI Assistant Error:', error);
-    
+
     // Handle specific OpenAI errors
     if (error.code === 'insufficient_quota') {
-      return res.status(402).json({ 
-        error: 'API quota exceeded. Please check your OpenAI account.' 
-      });
-    }
-    
-    if (error.code === 'invalid_api_key') {
-      return res.status(401).json({ 
-        error: 'Invalid API key. Please check your OpenAI configuration.' 
+      return res.status(402).json({
+        error: 'API quota exceeded. Please check your OpenAI account.',
       });
     }
 
-    res.status(500).json({ 
-      error: 'Failed to generate AI response. Please try again.' 
+    if (error.code === 'invalid_api_key') {
+      return res.status(401).json({
+        error: 'Invalid API key. Please check your OpenAI configuration.',
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to generate AI response. Please try again.',
     });
   }
 });
 
 // Generate relevant sources based on the query and response
-async function generateSources(query, response) {
+const generateSources = async (query, response) => {
   try {
     const sourcePrompt = `Based on this NASA bioscience query: "${query}" and this response: "${response}", generate 2-3 realistic scientific sources that would be relevant. Format as JSON array with title, authors (array), journal, year, and relevance percentage. Focus on NASA, space biology, and related scientific journals.`;
 
@@ -95,40 +95,40 @@ async function generateSources(query, response) {
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: sourcePrompt }],
       max_tokens: 500,
-      temperature: 0.3
+      temperature: 0.3,
     });
 
     const sourcesText = completion.choices[0].message.content;
-    
+
     // Try to parse JSON, fallback to default sources if parsing fails
     try {
       return JSON.parse(sourcesText);
     } catch {
       return [
         {
-          title: "NASA Space Biology Research Overview",
-          authors: ["Dr. NASA Research Team"],
-          journal: "NASA Technical Reports",
-          year: "2024",
-          relevance: "95%"
+          title: 'NASA Space Biology Research Overview',
+          authors: ['Dr. NASA Research Team'],
+          journal: 'NASA Technical Reports',
+          year: '2024',
+          relevance: '95%',
         },
         {
-          title: "International Space Station Biology Experiments",
-          authors: ["Dr. Space Biology Consortium"],
-          journal: "Space Biology Journal",
-          year: "2024",
-          relevance: "88%"
-        }
+          title: 'International Space Station Biology Experiments',
+          authors: ['Dr. Space Biology Consortium'],
+          journal: 'Space Biology Journal',
+          year: '2024',
+          relevance: '88%',
+        },
       ];
     }
   } catch (error) {
     console.error('Error generating sources:', error);
     return [];
   }
-}
+};
 
 // Generate key insights from the response
-async function generateInsights(response) {
+const generateInsights = async (response) => {
   try {
     const insightsPrompt = `Extract 2-3 key insights from this NASA bioscience response: "${response}". Format as a JSON array of strings. Focus on the most important scientific findings or implications.`;
 
@@ -136,33 +136,33 @@ async function generateInsights(response) {
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: insightsPrompt }],
       max_tokens: 300,
-      temperature: 0.3
+      temperature: 0.3,
     });
 
     const insightsText = completion.choices[0].message.content;
-    
+
     try {
       return JSON.parse(insightsText);
     } catch {
       return [
-        "Research shows significant biological adaptations in space environments",
-        "Multiple studies indicate the importance of understanding space-induced changes",
-        "Long-duration missions require comprehensive biological monitoring systems"
+        'Research shows significant biological adaptations in space environments',
+        'Multiple studies indicate the importance of understanding space-induced changes',
+        'Long-duration missions require comprehensive biological monitoring systems',
       ];
     }
   } catch (error) {
     console.error('Error generating insights:', error);
     return [];
   }
-}
+};
 
 // Health check endpoint
 router.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     service: 'NASA Bioscience AI Assistant',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
-module.exports = router;
+export default router;

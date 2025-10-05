@@ -1,7 +1,9 @@
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const User = require('../models/User');
-const Activity = require('../models/Activity');
+// server/routes/auth.js
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import User from '../models/User';
+import Activity from '../models/Activity';
+
 const router = express.Router();
 
 // Signup
@@ -51,4 +53,4 @@ router.post('/activity', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,4 +1,4 @@
-// server/models/Knowledge.js
+
 import db from '../db';
 
 const getGraph = async (cb) => {
