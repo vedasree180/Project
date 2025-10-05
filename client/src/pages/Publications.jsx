@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './publications.css';
+import '../publications.css';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
